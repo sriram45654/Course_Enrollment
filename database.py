@@ -1,3 +1,4 @@
+import os
 import mysql.connector
 from mysql.connector import Error
 
@@ -10,10 +11,11 @@ from mysql.connector import Error
 # ==============================================================================
 
 # Centralized Database Configuration Details
-DB_HOST = "localhost"
-DB_USER = "root"
-DB_PASSWORD = "Sriram@3355"
-DB_NAME = "student_course_db"
+DB_HOST = os.getenv("MYSQLHOST")
+DB_USER = os.getenv("MYSQLUSER")
+DB_PASSWORD = os.getenv("MYSQLPASSWORD")
+DB_NAME = os.getenv("MYSQLDATABASE")
+DB_PORT = int(os.getenv("MYSQLPORT", 3306))
 
 # Set S: All 48 Students (student_id = actual Roll Number)
 INITIAL_STUDENTS = [
@@ -76,34 +78,28 @@ INITIAL_COURSES = [
     ("C05", "Artificial Intelligence", 4)
 ]
 
-def get_db_connection(include_db=True):
-    """
-    Centralized MySQL database connection function.
-    """
+def get_db_connection(include_db=True) :
     try:
+        config = {
+            "host": DB_HOST,
+            "user": DB_USER,
+            "password": DB_PASSWORD,
+            "port": DB_PORT
+        }
+
         if include_db:
-            connection = mysql.connector.connect(
-                host=DB_HOST,
-                user=DB_USER,
-                password=DB_PASSWORD,
-                database=DB_NAME
-            )
-        else:
-            connection = mysql.connector.connect(
-                host=DB_HOST,
-                user=DB_USER,
-                password=DB_PASSWORD
-            )
-        return connection
+            config["database"] = DB_NAME
+
+        return mysql.connector.connect(**config)
+
     except Error as e:
         print(f"Error connecting to MySQL database: {e}")
         return None
-
 def init_db():
     """
     Creates database 'student_course_db', tables, and seeds 48 students & 5 courses.
     """
-    conn = get_db_connection(include_db=False)
+    conn = get_db_connection(include_db=True)
     if not conn:
         print("Could not connect to MySQL server. Please verify MySQL service is running.")
         return False
@@ -111,13 +107,7 @@ def init_db():
     cursor = conn.cursor()
 
     try:
-        cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{DB_NAME}` DEFAULT CHARACTER SET utf8mb4;")
-        conn.close()
-
-        conn = get_db_connection(include_db=True)
-        if not conn:
-            return False
-        cursor = conn.cursor()
+        
 
         # Check legacy table structure
         cursor.execute("SHOW TABLES LIKE 'students';")
